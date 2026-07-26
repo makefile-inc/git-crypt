@@ -42,7 +42,7 @@ git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local 
 	if [[ "$$KEY_PATH" == "$${cur_dir}/"* ]]; then \
     	exit_with_err "Key destination in repo path. Please choice another destination"; \
 	fi; \
-	if [ -s "$${cur_dir}/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep git-crypt | wc -l)" = "4" ]; then \
+	if [ -s "$${cur_dir}/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep 'filter.git-crypt' | wc -l)" = "3" ]; then \
 		exit_with_err "Repo already unlocked!"; \
 	fi; \
 	attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
@@ -74,7 +74,7 @@ git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local 
 git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with symmetric key
 	@##~ KEY_PATH=PATH - path to key file to unlock
 	@${INCLUDE_ECHO} \
-	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep git-crypt | wc -l)" = "4" ]; then \
+	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep 'filter.git-crypt' | wc -l)" = "3" ]; then \
 		echo_info "Already unlocked!"; \
 		exit 0; \
 	fi; \
@@ -85,8 +85,8 @@ git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with sy
 	if [ ! -f "$$key" ]; then \
 		exit_with_err "Key file '$$key' is not file or not found"; \
 	fi; \
-	full_fin_path="$(GIT_CRYPT_BIN_FULL)"; \
-	if ! full_fin_path="$$(realpath "$$full_fin_path")"; then \
+	full_bin_path="$(GIT_CRYPT_BIN_FULL)"; \
+	if ! full_bin_path="$$(realpath "$$full_bin_path")"; then \
 		exit_with_err "Cannot get realpath for $(GIT_CRYPT_BIN_FULL)"; \
 	fi; \
 	cur_dir="$(CURDIR)"; \
@@ -94,7 +94,7 @@ git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with sy
 		exit_with_err "Cannot get realpath for $(CURDIR)"; \
 	fi; \
 	cur_dir="$${cur_dir}/"; \
-	relative_crypt_bin="$${full_fin_path#$cur_dir}"; \
+	relative_crypt_bin="$${full_bin_path#$$cur_dir}"; \
 	if [ -z "$$relative_crypt_bin" ]; then \
 		exit_with_err "Relative git-crypt bin path is empty"; \
 	fi; \
