@@ -74,7 +74,7 @@ git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local 
 git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with symmetric key
 	@##~ KEY_PATH=PATH - path to key file to unlock
 	@${INCLUDE_ECHO} \
-	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep "git-crypt" | wc -l)" = "4" ]; then \
+	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep git-crypt | wc -l)" = "4" ]; then \
 		echo_info "Already unlocked!"; \
 		exit 0; \
 	fi; \
@@ -98,7 +98,7 @@ git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with sy
 	if [ -z "$$relative_crypt_bin" ]; then \
 		exit_with_err "Relative git-crypt bin path is empty"; \
 	fi; \
-	relative_crypt_bin="./$${relative_crypt_bin}"
+	relative_crypt_bin="./$${relative_crypt_bin}"; \
 	if ! $(GIT_CRYPT_BIN_FULL) unlock "$$key"; then \
 		exit_with_err "Cannot unlock repo with '$$key'"; \
 	fi; \
