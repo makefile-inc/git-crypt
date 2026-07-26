@@ -137,7 +137,10 @@ git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt
 		exit 0; \
 	fi; \
 	echo "$$trimmed filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
-	if ! git add "$$attributes_file" && git commit -m "Add file $$FILE to crypt"; then \
+	if ! git add "$$attributes_file"; then \
+		exit_with_err "Cannot commit add file"; \
+	fi; \
+	if ! git commit -m "Add file '$$FILE' to crypt"; then \
 		exit_with_err "Cannot commit add file"; \
 	fi
 
@@ -162,7 +165,10 @@ git-crypt/add/dir: install/git-crypt _git-crypt/no-changes ## Add dir to crypt a
 		exit 0; \
 	fi; \
 	echo "$$dir_path/** filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
-	if ! git add "$$attributes_file" && git commit -m "Add dir $$dir_path to crypt"; then \
+	if ! git add "$$attributes_file"; then \
+		exit_with_err "Cannot commit add dir"; \
+	fi; \
+	if ! git commit -m "Add dir '$$dir_path' to crypt"; then \
 		exit_with_err "Cannot commit add dir"; \
 	fi
 
@@ -190,6 +196,9 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	if ! sed -i "/$$escaped\/\?\*\?\*\? /d" "$$attributes_file"; then \
 		exit_with_err "Cannot remove attribute with sed"; \
 	fi; \
-	if ! git add "$$attributes_file" && git commit -m "Remove path $$TO_REMOVE from crypt"; then \
+	if ! git add "$$attributes_file"; then \
+		exit_with_err "Cannot commit remove path"; \
+	fi; \
+	if ! git commit -m "Remove path '$$TO_REMOVE' from crypt"; then \
 		exit_with_err "Cannot commit remove path"; \
 	fi
