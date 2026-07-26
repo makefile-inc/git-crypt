@@ -19,7 +19,7 @@ function commit_changes() { \
 	local attributes_file="$$1"; \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
-	if [[ "$$to_commit" =~ [*?\[] ]]; then
+	if [[ "$$to_commit" =~ [*?\[] ]]; then \
 		$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git rm --cached; \
 		local rm_statuses=("$${PIPESTATUS[@]}"); \
 		if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
