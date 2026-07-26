@@ -196,8 +196,27 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	if ! sed -i "/$$escaped\/\?\*\?\*\? /d" "$$attributes_file"; then \
 		exit_with_err "Cannot remove attribute with sed"; \
 	fi; \
+	function dirty_state_error() { \
+		echo_err "ATTENTION!"; \
+		echo_err "YOU REPO IN DIRTY STATE!"; \
+		echo_err "DO NOT COMMIT CHANGES OTHERWISE YOU LOST FILES!"; \
+		echo_err "MANUAL REMOVING IS:"; \
+		echo "git rm --cached ..."; \
+		echo "git add ..."; \
+		echo "git commit ..."; \
+		exit_with_err "ATTENTION! Cannot remove '$$TO_REMOVE' from crypt"; \
+	}; \
+	if ! git rm --cached $$TO_REMOVE; then \
+		echo_err "Cannot 'git rm --cached $$TO_REMOVE'"; \
+		dirty_state_error; \
+	fi; \
+	if ! git add $$TO_REMOVE; then \
+		echo_err "Cannot 'git add $$TO_REMOVE'"; \
+		dirty_state_error; \
+	fi; \
 	if ! git add "$$attributes_file"; then \
-		exit_with_err "Cannot commit remove path"; \
+		echo_err "Cannot 'git add $$attributes_file'"; \
+		dirty_state_error; \
 	fi; \
 	if ! git commit -m "Remove path '$$TO_REMOVE' from crypt"; then \
 		exit_with_err "Cannot commit remove path"; \
