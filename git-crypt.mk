@@ -36,6 +36,9 @@ git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local 
 	if ! cur_dir="$$(realpath "$$cur_dir")"; then \
 		exit_with_err "Cannot get realpath for $(CURDIR)"; \
 	fi; \
+	if ! KEY_PATH="$$(realpath "$$KEY_PATH")"; then \
+		exit_with_err "Cannot get realpath for KEY_PATH"; \
+	fi; \
 	if [[ "$$KEY_PATH" == "$${cur_dir}/"* ]]; then \
     	exit_with_err "Key destination in repo path. Please choice another destination"; \
 	fi; \
