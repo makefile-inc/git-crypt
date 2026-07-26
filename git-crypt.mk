@@ -86,11 +86,11 @@ git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with sy
 		exit_with_err "Key file '$$key' is not file or not found"; \
 	fi; \
 	full_fin_path="$(GIT_CRYPT_BIN_FULL)"; \
-	if ! full_fin_path="$$(realpath "$$full_fin_path")"; \
+	if ! full_fin_path="$$(realpath "$$full_fin_path")"; then \
 		exit_with_err "Cannot get realpath for $(GIT_CRYPT_BIN_FULL)"; \
 	fi; \
 	cur_dir="$(CURDIR)"; \
-	if ! cur_dir="$$(realpath "$$cur_dir")"; \
+	if ! cur_dir="$$(realpath "$$cur_dir")"; then \
 		exit_with_err "Cannot get realpath for $(CURDIR)"; \
 	fi; \
 	cur_dir="$${cur_dir}/"; \
