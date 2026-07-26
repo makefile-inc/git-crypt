@@ -10,7 +10,7 @@ _git-crypt/no-changes:
 	if ! stt="$$(git status)"; then \
 		exit_with_err "Cannot get repo status with 'git status'"; \
 	fi; \
-	if ! grep -q "Your branch is up to date with" <<<"$$stt"; then \
+	if ! grep -q "nothing to commit, working tree clean" <<<"$$stt"; then \
 		echo_err "Git status:"; \
 		echo "$$stt"; \
 		exit_with_err "Git repo has changes"; \
