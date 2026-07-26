@@ -23,7 +23,7 @@ install/git-crypt: export INSTALL_BIN_URL = https://github.com/makefile-inc/git-
 install/git-crypt: ## Install git-crypt from https://github.com/makefile-inc/git-crypt repo
 	@$(MAKE) install/binary
 
-git-crypt/symmetric/init: install/git-crypt ## Init local repository with symmetric key and export key. Git repo should be clean
+git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local repository with symmetric key and export key. Git repo should be clean
 	@##~ KEY_PATH=PATH - path to save key
 	@${INCLUDE_ECHO} \
 	if [ -z "$$KEY_PATH" ]; then \
@@ -33,13 +33,13 @@ git-crypt/symmetric/init: install/git-crypt ## Init local repository with symmet
 		exit_with_err "Output key file '$$KEY_PATH' exist"; \
 	fi; \
 	cur_dir="$(CURDIR)"; \
-	if ! cur_dir="$$(realpath "$$cur_dir")"; \
+	if ! cur_dir="$$(realpath "$$cur_dir")"; then \
 		exit_with_err "Cannot get realpath for $(CURDIR)"; \
 	fi; \
 	if [[ "$$KEY_PATH" == "$${cur_dir}/"* ]]; then \
     	exit_with_err "Key destination in repo path. Please choice another destination"; \
 	fi; \
-	if [ -s "$${cur_dir}/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep "git-crypt" | wc -l)" = "4" ]; then \
+	if [ -s "$${cur_dir}/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep git-crypt | wc -l)" = "4" ]; then \
 		exit_with_err "Repo already unlocked!"; \
 	fi; \
 	attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
