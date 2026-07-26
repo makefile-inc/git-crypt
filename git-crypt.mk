@@ -19,13 +19,28 @@ function commit_changes() { \
 	local attributes_file="$$1"; \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
-	if ! git rm --cached $$to_commit; then \
-		echo_err "Cannot 'git rm --cached $$TO_REMOVE'"; \
-		dirty_state_error "$$op_name"; \
-	fi; \
-	if ! git add $$to_commit; then \
-		echo_err "Cannot 'git add $$to_commit'"; \
-		dirty_state_error "$$op_name"; \
+	if [[ "$$to_commit" =~ [*?\[] ]]; then
+		$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git rm --cached; \
+		local rm_statuses=("$${PIPESTATUS[@]}"); \
+		if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
+			echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git rm --cached"; \
+			dirty_state_error "$$op_name"; \
+		fi; \
+		$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git add; \
+		local add_statuses=("$${PIPESTATUS[@]}"); \
+		if [[ "$${add_statuses[0]}" != "0" || "$${add_statuses[1]}" != "0" ]]; then \
+			echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git add"; \
+			dirty_state_error "$$op_name"; \
+		fi; \
+	else \
+		if ! git rm -r --cached $$to_commit; then \
+			echo_err "Cannot 'git rm --cached $$to_commit'"; \
+			dirty_state_error "$$op_name"; \
+		fi; \
+		if ! git add $$to_commit; then \
+			echo_err "Cannot 'git add $$to_commit'"; \
+			dirty_state_error "$$op_name"; \
+		fi; \
 	fi; \
 	if ! git add "$$attributes_file"; then \
 		echo_err "Cannot 'git add $$attributes_file'"; \
