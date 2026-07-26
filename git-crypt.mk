@@ -3,6 +3,57 @@ GIT_CRYPT_BIN_FULL = $(BINARIES_PATH)/$(GIT_CRYPT_BIN)
 
 _GIT_ATTRIBUTES_PATH = $(CURDIR)/.gitattributes
 
+define _GIT_CRYPT_OP_INCLUDES
+${INCLUDE_ECHO} \
+function dirty_state_error() { \
+	echo_err "ATTENTION!"; \
+	echo_err "YOU REPO IN DIRTY STATE!"; \
+	echo_err "DO NOT COMMIT CHANGES OTHERWISE YOU LOST FILES!"; \
+	echo_err "MANUAL REMOVING IS:"; \
+	echo "git rm --cached ..."; \
+	echo "git add ..."; \
+	echo "git commit ..."; \
+	exit_with_err "Crypt operation '$$1' FAILED!"; \
+}; \
+function commit_changes() { \
+	local attributes_file="$$1"; \
+	local op_name="$$2"; \
+	local to_commit="$$3"; \
+	if ! git rm --cached $$to_commit; then \
+		echo_err "Cannot 'git rm --cached $$TO_REMOVE'"; \
+		dirty_state_error "$$op_name"; \
+	fi; \
+	if ! git add $$to_commit; then \
+		echo_err "Cannot 'git add $$to_commit'"; \
+		dirty_state_error "$$op_name"; \
+	fi; \
+	if ! git add "$$attributes_file"; then \
+		echo_err "Cannot 'git add $$attributes_file'"; \
+		dirty_state_error "$$op_name"; \
+	fi; \
+	if ! git commit -m "git-crypt: $$op_name '$$to_commit'"; then \
+		exit_with_err "Cannot commit $$op_name"; \
+	fi; \
+}; \
+function check_path_for_op() { \
+	local var_name="$$1"; \
+	local pt_for_check="$$2"; \
+	if [ -z "$$pt_for_check" ]; then \
+		exit_with_err "Path not specify with '$$var_name' param (env)"; \
+	fi; \
+	if [[ "$$pt_for_check" == /* ]]; then \
+    	exit_with_err "Path '$$pt_for_check' should not be absolute"; \
+	fi; \
+}; \
+function prepare_attributes() { \
+	local attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
+	if [ ! -f "$$attributes_file" ]; then \
+		touch "$$attributes_file"; \
+	fi; \
+	echo -n "$$attributes_file"; \
+};
+endef
+
 ##@ git-crypt
 
 _git-crypt/no-changes:
@@ -120,43 +171,22 @@ git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with sy
 
 git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt and commit to git. Git repo should be clean
 	@##~ FILE=PATH - path to add to crypt. Should not be absolute
-	@${INCLUDE_ECHO} \
-	if [ -z "$$FILE" ]; then \
-		exit_with_err "File not specify with 'FILE' param (env)"; \
-	fi; \
-	if [[ "$$FILE" == /* ]]; then \
-    	exit_with_err "Path '$$FILE' should not be absolute"; \
-	fi; \
-	attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
-	if [ ! -f "$$attributes_file" ]; then \
-		touch "$$attributes_file"; \
-	fi; \
+	@${_GIT_CRYPT_OP_INCLUDES} \
+	check_path_for_op "FILE" "$$FILE"; \
+	attributes_file="$$(prepare_attributes)"; \
 	trimmed="$${FILE#/}"; \
 	if grep "^$$trimmed" "$$attributes_file"; then \
 		echo_info "'$$FILE' already added!"; \
 		exit 0; \
 	fi; \
 	echo "$$trimmed filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
-	if ! git add "$$attributes_file"; then \
-		exit_with_err "Cannot commit add file"; \
-	fi; \
-	if ! git commit -m "Add file '$$FILE' to crypt"; then \
-		exit_with_err "Cannot commit add file"; \
-	fi
+	commit_changes "$$attributes_file" "add file(s)" "$$trimmed"
 
 git-crypt/add/dir: install/git-crypt _git-crypt/no-changes ## Add dir to crypt and commit to git. Git repo should be clean
 	@##~ DIR=PATH - dir path to add to crypt. Should not be absolute
-	@${INCLUDE_ECHO} \
-	if [ -z "$$DIR" ]; then \
-		exit_with_err "Dir path not specify with 'DIR' param (env)"; \
-	fi; \
-	if [[ "$$DIR" == /* ]]; then \
-    	exit_with_err "Path '$$DIR' should not be absolute"; \
-	fi; \
-	attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
-	if [ ! -f "$$attributes_file" ]; then \
-		touch "$$attributes_file"; \
-	fi; \
+	@${_GIT_CRYPT_OP_INCLUDES} \
+	check_path_for_op "DIR" "$$DIR"; \
+	attributes_file="$$(prepare_attributes)"; \
 	dir_path="$${DIR%*}"; \
 	dir_path="$${dir_path%*}"; \
 	dir_path="$${dir_path#/}"; \
@@ -165,26 +195,13 @@ git-crypt/add/dir: install/git-crypt _git-crypt/no-changes ## Add dir to crypt a
 		exit 0; \
 	fi; \
 	echo "$$dir_path/** filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
-	if ! git add "$$attributes_file"; then \
-		exit_with_err "Cannot commit add dir"; \
-	fi; \
-	if ! git commit -m "Add dir '$$dir_path' to crypt"; then \
-		exit_with_err "Cannot commit add dir"; \
-	fi
+	commit_changes "$$attributes_file" "add dir" "$$dir_path"
 
 git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from crypt and commit to git. Git repo should be clean
 	@##~ TO_REMOVE=PATH - path to remove from crypt. Should not be absolute
-	@${INCLUDE_ECHO} \
-	if [ -z "$$TO_REMOVE" ]; then \
-		exit_with_err "Path to remove not specify with 'TO_REMOVE' param (env)"; \
-	fi; \
-	if [[ "$$TO_REMOVE" == /* ]]; then \
-    	exit_with_err "Path '$$TO_REMOVE' should not be absolute"; \
-	fi; \
-	attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
-	if [ ! -f "$$attributes_file" ]; then \
-		touch "$$attributes_file"; \
-	fi; \
+	@${_GIT_CRYPT_OP_INCLUDES} \
+	check_path_for_op "TO_REMOVE" "$$TO_REMOVE"; \
+	attributes_file="$$(prepare_attributes)"; \
 	trimmed="$${TO_REMOVE%*}"; \
 	trimmed="$${trimmed%*}"; \
 	trimmed="$${trimmed#/}"; \
@@ -196,28 +213,4 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	if ! sed -i "/$$escaped\/\?\*\?\*\? /d" "$$attributes_file"; then \
 		exit_with_err "Cannot remove attribute with sed"; \
 	fi; \
-	function dirty_state_error() { \
-		echo_err "ATTENTION!"; \
-		echo_err "YOU REPO IN DIRTY STATE!"; \
-		echo_err "DO NOT COMMIT CHANGES OTHERWISE YOU LOST FILES!"; \
-		echo_err "MANUAL REMOVING IS:"; \
-		echo "git rm --cached ..."; \
-		echo "git add ..."; \
-		echo "git commit ..."; \
-		exit_with_err "ATTENTION! Cannot remove '$$TO_REMOVE' from crypt"; \
-	}; \
-	if ! git rm --cached $$TO_REMOVE; then \
-		echo_err "Cannot 'git rm --cached $$TO_REMOVE'"; \
-		dirty_state_error; \
-	fi; \
-	if ! git add $$TO_REMOVE; then \
-		echo_err "Cannot 'git add $$TO_REMOVE'"; \
-		dirty_state_error; \
-	fi; \
-	if ! git add "$$attributes_file"; then \
-		echo_err "Cannot 'git add $$attributes_file'"; \
-		dirty_state_error; \
-	fi; \
-	if ! git commit -m "Remove path '$$TO_REMOVE' from crypt"; then \
-		exit_with_err "Cannot commit remove path"; \
-	fi
+	commit_changes "$$attributes_file" "remove path" "$$trimmed"
