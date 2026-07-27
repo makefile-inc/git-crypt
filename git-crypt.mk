@@ -251,7 +251,7 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	remove_without_slash="$${trimmed%/}"; \
 	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash"
 
-clean/git-crypt:
+clean/git-crypt: ## Remove git-crypt bin
 	@rm -fv "$(GIT_CRYPT_BIN_FULL)"
 
 .PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt
