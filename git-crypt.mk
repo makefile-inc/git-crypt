@@ -157,7 +157,7 @@ git-crypt/repo/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init l
 	if ! $(GIT_CRYPT_BIN_FULL) lock; then \
 		exit_with_err "Cannot lock repo"; \
 	fi; \
-	if ! $(MAKE) git-crypt/symmetric/unlock KEY_PATH="$$KEY_PATH"; then \
+	if ! $(MAKE) git-crypt/repo/symmetric/unlock KEY_PATH="$$KEY_PATH"; then \
 		exit_with_err "Cannot unlock repo"; \
 	fi; \
 	echo_info "git-crypt init fully!"; \
