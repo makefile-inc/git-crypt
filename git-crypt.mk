@@ -30,7 +30,7 @@ function commit_changes() { \
 	fi; \
 	if [[ "$$count_to_commit" != "0" ]]; then \
 		if [[ "$$to_commit" =~ [*?\[] ]]; then \
-			$(FIND_BIN) . -name "$$to_commit" -name -print0 | xargs -0 git rm --cached; \
+			$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git rm --cached; \
 			local rm_statuses=("$${PIPESTATUS[@]}"); \
 			if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
 				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git rm --cached"; \
