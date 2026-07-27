@@ -67,6 +67,15 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ...
 ```
 
+## Update as submodule
+
+```bash
+pushd .
+cd makefile-common
+git fetch -a && git checkout NEW_TAG && git pull
+popd
+```
+
 ## Post install/update
 
 Please add to `.gitignore` all entries from this repository `.gitignore`.
@@ -207,3 +216,7 @@ You can build and extract binary with [build.sh](./hack/git-crypt/build.sh) scri
 ```bash
 ./build.sh "${HOME}/bin/git-crypt"
 ```
+
+## Test cases
+
+Described in repo https://github.com/makefile-inc/test-git-crypt
