@@ -224,13 +224,13 @@ git-crypt/add/dir: install/git-crypt _git-crypt/no-changes ## Add dir to crypt a
 	check_path_for_op "DIR" "$$DIR"; \
 	attributes_file="$$(prepare_attributes)"; \
 	dir_path="$${DIR%*}"; \
-	dir_path="$${dir_path%*}"; \
-	dir_path="$${dir_path#/}"; \
-	if grep "^$$dir_path/**" "$$attributes_file"; then \
+	dir_path="$${dir_path#*}"; \
+	dir_path="$${dir_path%/}"; \
+	if grep "^$${dir_path}/**" "$$attributes_file"; then \
 		echo_info "$$dir_path already added!"; \
 		exit 0; \
 	fi; \
-	echo "$$dir_path/** filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
+	echo "$${dir_path}/** filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
 	commit_changes "$$attributes_file" "add dir" "$$dir_path"
 
 git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from crypt and commit to git. Git repo should be clean
@@ -240,7 +240,6 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	attributes_file="$$(prepare_attributes)"; \
 	trimmed="$${TO_REMOVE%*}"; \
 	trimmed="$${trimmed%*}"; \
-	trimmed="$${trimmed#/}"; \
 	if ! grep "^$$trimmed" "$$attributes_file"; then \
 		echo_info "$$TO_REMOVE already removed"; \
 		exit 0; \
@@ -249,7 +248,8 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	if ! sed -i "/$$escaped\/\?\*\?\*\? /d" "$$attributes_file"; then \
 		exit_with_err "Cannot remove attribute with sed"; \
 	fi; \
-	commit_changes "$$attributes_file" "remove path" "$$trimmed"
+	remove_without_slash="$${trimmed%/}"; \
+	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash"
 
 clean/git-crypt:
 	@rm -fv "$(GIT_CRYPT_BIN_FULL)"
