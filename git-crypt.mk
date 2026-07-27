@@ -20,14 +20,12 @@ function commit_changes() { \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
 	local count_to_commit=""; \
-	count_to_commit="$$($(FIND_BIN) . -type f -name "$$to_commit" | wc -l)"; \
-	local count_statuses=("$${PIPESTATUS[@]}"); \
-	if [[ "$${count_statuses[0]}" != "0" || "$${count_statuses[1]}" != "0" ]]; then \
-		echo_err "Cannot get count to commit with '$(FIND_BIN) . -type f -name '$$to_commit' -print0 | wc -l"; \
+	if ! count_to_commit="$$($(FIND_BIN) . -type f -name "$$to_commit" | wc -l; exit $${PIPESTATUS[0]})"; then \
+		echo_err "Cannot get count to commit with '$(FIND_BIN) . -type f -name '$$to_commit' | wc -l"; \
 		dirty_state_error "$$op_name"; \
 	fi; \
 	if [ -z "$$count_to_commit" ]; then \
-		echo_err "Count to commit with is empty string"; \
+		echo_err "Count to commit with is empty string!"; \
 		dirty_state_error "$$op_name"; \
 	fi; \
 	if [[ "$$count_to_commit" != "0" ]]; then \
