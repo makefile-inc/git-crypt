@@ -142,6 +142,8 @@ In this case you **SHOULD resolve manually** for prevent lost files!
 
 **Be careful with exclude part of secrets with `git-crypt/remove`**!
 
+Unfortunately, git-attributes file not support negative `!` patterns.
+
 If you need exclude some files from crypt from dir or glob you **SHOULD** remove
 entry dir or all glob, and re-add with `git-crypt/add/file` or `git-crypt/add/dir`.
 
@@ -189,7 +191,7 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
   - `FILE`=*PATH* - path to add to crypt. Should not be absolute.
     You can use glob for add multiple files like `*.settings.tf`.
 
-- `git-crypt/add/dir` - add directory to crypt and commit to git.
+- `git-crypt/add/dir` - add directory (with sub-directories) to crypt and commit to git.
   [See above](#addremove-paths) for more information about mechanic.
 
   Params:
@@ -203,6 +205,8 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
     You **SHOULD** use same patter which used in `git-crypt/add/file` (with glob if needs) or `git-crypt/add/dir`.
     For directories you **SHOULD** add slash `/` to end, like `my-dir/`!
     Patterns can see in `.gitattributes` file.
+
+    Unfortunately, git-attributes file not support negative `!` patterns.
     
     If you need exclude some files from crypt from dir or glob you **SHOULD** remove
     entry dir or all glob, and re-add with `git-crypt/add/file` or `git-crypt/add/dir`.
@@ -212,6 +216,114 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
     You **SHOULD** squash commits **before push** to prevent leak secrets!
 
 - `clean/git-crypt` - remove `git-crypt` binary as `GIT_CRYPT_BIN_FULL`.
+
+## Examples
+
+Add `Makefile` and [include](#install) `makefile.inc/git-crypt`.
+
+- init
+
+```bash
+make git-crypt/repo/symmetric/init KEY_PATH=../repo.key
+```
+
+- unlock
+
+```bash
+make git-crypt/repo/symmetric/unlock KEY_PATH="${HOME}/secret-place/repo.key"
+```
+
+- add single file `test-1.key`
+
+```bash
+make git-crypt/add/file FILE=test-1.key
+```
+
+- add single file in sub-directory `subdir/deep/key.txt`
+
+```bash
+make git-crypt/add/file FILE=subdir/deep/key.txt
+```
+
+- add directory `keys-dir/` with sub-directories
+
+```bash
+make git-crypt/add/dir DIR=keys-dir/
+```
+
+- add files for all directories with suffix `.settings.tf`
+
+```bash
+make git-crypt/add/file FILE=*.settings.tf
+```
+
+- remove from crypt single file `test-1.key` add as `make git-crypt/add/file FILE=test-1.key`
+
+```bash
+make git-crypt/remove TO_REMOVE=test-1.key
+```
+
+- remove from crypt single file in sub-directory `subdir/deep/key.txt` added as `make git-crypt/add/file FILE=subdir/deep/key.txt`
+
+```bash
+make git-crypt/remove TO_REMOVE=subdir/deep/key.txt
+```
+
+- remove from crypt directory with sub-directories `keys-dir/` added as `make git-crypt/add/dir DIR=keys-dir/`
+
+```bash
+make git-crypt/remove TO_REMOVE=keys-dir/
+```
+
+- remove from crypt add files for all directories with suffix `.settings.tf` added as `make git-crypt/add/file FILE=*.settings.tf`
+
+```bash
+make git-crypt/remove TO_REMOVE=*.settings.tf
+```
+
+- remove partial files after add via globs or dir.
+  For example, we have next structure:
+  ```
+  repo/
+  ├── no_encrypted.file
+  ├── dir-with-keys/
+  │   ├── first.key
+  │   ├── second.key
+  ```
+  And you add full dir with `make git-crypt/add/dir DIR=dir-with-keys/` and now you want to exclude `dir-with-keys/first.key`.
+  If you want remove permanently, you can remove file and commit. 
+  Otherwise, if you want to exclude file, you have next variants:
+  - move non-secret file to another directory:
+    ```bash
+    mkdir not-encrypted-dir
+    mv dir-with-keys/first.key not-encrypted-dir/
+    ```
+  - create new secret directory, add to crypt and move secret files:
+    ```bash
+    make git-crypt/add/dir DIR=new-secret-dir/
+    mkdir new-secret-dir
+    mv dir-with-keys/second.key new-secret-dir/
+    git add new-secret-dir/ dir-with-keys/
+    git commit -m "refact secrets"
+    make git-crypt/remove TO_REMOVE=dir-with-keys/
+    ```
+  - exclude file from crypt. It is not good choice, because, unfortunately,
+    git-attributes file not support negative `!` patterns, and after add another secrets
+    you **should** add **all** another secrets manually for each secret: 
+    ```bash
+    make git-crypt/remove TO_REMOVE=dir-with-keys/
+    make git-crypt/add/file FILE=dir-with-keys/second.key
+    # Find first commit on branch
+    git log
+    # Squash branch to prevent leak secrets
+    git rebase -i HEAD~COUNT_OF_COMMITS
+    git push --force
+    ```
+
+- lock repo
+  ```bash
+  make git-crypt/repo/lock
+  ```
 
 ## git-crypt sources
 
