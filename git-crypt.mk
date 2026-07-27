@@ -19,28 +19,43 @@ function commit_changes() { \
 	local attributes_file="$$1"; \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
-	if [[ "$$to_commit" =~ [*?\[] ]]; then \
-		$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git rm --cached; \
-		local rm_statuses=("$${PIPESTATUS[@]}"); \
-		if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
-			echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git rm --cached"; \
-			dirty_state_error "$$op_name"; \
-		fi; \
-		$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git add; \
-		local add_statuses=("$${PIPESTATUS[@]}"); \
-		if [[ "$${add_statuses[0]}" != "0" || "$${add_statuses[1]}" != "0" ]]; then \
-			echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git add"; \
-			dirty_state_error "$$op_name"; \
+	local count_to_commit=""; \
+	count_to_commit="$$($(FIND_BIN) . -type f -name "$$to_commit" | wc -l)"; \
+	local count_statuses=("$${PIPESTATUS[@]}"); \
+	if [[ "$${count_statuses[0]}" != "0" || "$${count_statuses[1]}" != "0" ]]; then \
+		echo_err "Cannot get count to commit with '$(FIND_BIN) . -type f -name '$$to_commit' -print0 | wc -l"; \
+		dirty_state_error "$$op_name"; \
+	fi; \
+	if [ -z "$$count_to_commit" ]; then \
+		echo_err "Count to commit with is empty string"; \
+		dirty_state_error "$$op_name"; \
+	fi; \
+	if [[ "$$count_to_commit" != "0" ]]; then \
+		if [[ "$$to_commit" =~ [*?\[] ]]; then \
+			$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git rm --cached; \
+			local rm_statuses=("$${PIPESTATUS[@]}"); \
+			if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
+				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git rm --cached"; \
+				dirty_state_error "$$op_name"; \
+			fi; \
+			$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git add; \
+			local add_statuses=("$${PIPESTATUS[@]}"); \
+			if [[ "$${add_statuses[0]}" != "0" || "$${add_statuses[1]}" != "0" ]]; then \
+				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git add"; \
+				dirty_state_error "$$op_name"; \
+			fi; \
+		else \
+			if ! git rm -r --cached $$to_commit; then \
+				echo_err "Cannot 'git rm --cached $$to_commit'"; \
+				dirty_state_error "$$op_name"; \
+			fi; \
+			if ! git add $$to_commit; then \
+				echo_err "Cannot 'git add $$to_commit'"; \
+				dirty_state_error "$$op_name"; \
+			fi; \
 		fi; \
 	else \
-		if ! git rm -r --cached $$to_commit; then \
-			echo_err "Cannot 'git rm --cached $$to_commit'"; \
-			dirty_state_error "$$op_name"; \
-		fi; \
-		if ! git add $$to_commit; then \
-			echo_err "Cannot 'git add $$to_commit'"; \
-			dirty_state_error "$$op_name"; \
-		fi; \
+		echo_info "Not found any files to re-add to git. Skip"; \
 	fi; \
 	if ! git add "$$attributes_file"; then \
 		echo_err "Cannot 'git add $$attributes_file'"; \
@@ -89,8 +104,8 @@ install/git-crypt: export INSTALL_BIN_URL = https://github.com/makefile-inc/git-
 install/git-crypt: ## Install git-crypt from https://github.com/makefile-inc/git-crypt repo
 	@$(MAKE) install/binary
 
-git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local repository with symmetric key and export key. Git repo should be clean
-	@##~ KEY_PATH=PATH - path to save key
+git-crypt/repo/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local repository with symmetric key and export key. Git repo should be clean
+	@##~ KEY_PATH=PATH - path to save key. Should be outside the repo (current dir)
 	@${INCLUDE_ECHO} \
 	if [ -z "$$KEY_PATH" ]; then \
 		exit_with_err "Output key file not specify with 'KEY_PATH' param (env)"; \
@@ -134,10 +149,12 @@ git-crypt/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local 
 		exit_with_err "Cannot unlock repo"; \
 	fi; \
 	echo_info "git-crypt init fully!"; \
+	echo_info "For add file use git-crypt/add/file"; \
+	echo_info "For add dir use git-crypt/add/dir"; \
 	echo_info "Symmetric key save to $$KEY_PATH"; \
 	echo_info "Please save key in the security location and use for unlock repo later"
 
-git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with symmetric key
+git-crypt/repo/symmetric/unlock: install/git-crypt _git-crypt/no-changes ## Unlock local repository with symmetric key
 	@##~ KEY_PATH=PATH - path to key file to unlock
 	@${INCLUDE_ECHO} \
 	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep 'filter.git-crypt' | wc -l)" = "3" ]; then \
@@ -182,6 +199,12 @@ git-crypt/symmetric/unlock: install/git-crypt ## Unlock local repository with sy
 	diff_str="\"$$relative_crypt_bin\" diff"; \
 	if ! git config --local diff.git-crypt.textconv "$$diff_str"; then \
 		exit_with_err "Failed to set to git config git crypt diff"; \
+	fi
+
+git-crypt/repo/lock: install/git-crypt _git-crypt/no-changes ## Lock local repository
+	@${INCLUDE_ECHO} \
+	if ! $(GIT_CRYPT_BIN_FULL) lock; then \
+		exit_with_err "Cannot lock repo"; \
 	fi
 
 git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt and commit to git. Git repo should be clean
@@ -229,3 +252,8 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 		exit_with_err "Cannot remove attribute with sed"; \
 	fi; \
 	commit_changes "$$attributes_file" "remove path" "$$trimmed"
+
+clean/git-crypt:
+	@rm -fv "$(GIT_CRYPT_BIN_FULL)"
+
+.PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt
