@@ -20,8 +20,8 @@ function commit_changes() { \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
 	local count_to_commit=""; \
-	if ! count_to_commit="$$($(FIND_BIN) . -type f -name "$$to_commit" -wholename | wc -l; exit $${PIPESTATUS[0]})"; then \
-		echo_err "Cannot get count to commit with '$(FIND_BIN) . -type f -name -wholename '$$to_commit' | wc -l"; \
+	if ! count_to_commit="$$($(FIND_BIN) . -wholename "$$to_commit" | wc -l; exit $${PIPESTATUS[0]})"; then \
+		echo_err "Cannot get count to commit with '$(FIND_BIN) . -type f -wholename '$$to_commit' | wc -l"; \
 		dirty_state_error "$$op_name"; \
 	fi; \
 	if [ -z "$$count_to_commit" ]; then \
@@ -33,13 +33,13 @@ function commit_changes() { \
 			$(FIND_BIN) . -name "$$to_commit" -wholename -print0 | xargs -0 git rm --cached; \
 			local rm_statuses=("$${PIPESTATUS[@]}"); \
 			if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
-				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -wholename -print0 | xargs -0 git rm --cached"; \
+				echo_err "Cannot '$(FIND_BIN) . -wholename '$$to_commit' -print0 | xargs -0 git rm --cached"; \
 				dirty_state_error "$$op_name"; \
 			fi; \
-			$(FIND_BIN) . -name "$$to_commit" -wholename -print0 | xargs -0 git add; \
+			$(FIND_BIN) . -wholename "$$to_commit" -print0 | xargs -0 git add; \
 			local add_statuses=("$${PIPESTATUS[@]}"); \
 			if [[ "$${add_statuses[0]}" != "0" || "$${add_statuses[1]}" != "0" ]]; then \
-				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -wholename -print0 | xargs -0 git add"; \
+				echo_err "Cannot '$(FIND_BIN) . -wholename '$$to_commit' -print0 | xargs -0 git add"; \
 				dirty_state_error "$$op_name"; \
 			fi; \
 		else \
