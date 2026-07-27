@@ -15,45 +15,59 @@ function dirty_state_error() { \
 	echo "git commit ..."; \
 	exit_with_err "Crypt operation '$$1' FAILED!"; \
 }; \
+function toggle_globs() { \
+	local shop_arg="-u"; \
+	local err_msg="disable globs"; \
+	if [[ "$${1:-}" == "on" ]]; then \
+		shop_arg="-s"; \
+		err_msg="enable globs"; \
+	fi; \
+	local globs_sett=("dotglob" "nullglob" "globstar"); \
+	for g_sett in "$${globs_sett[@]}"; do \
+		if ! shopt $$shop_arg "$$g_sett"; then \
+			exit_with_err "Cannot $$err_msg $$g_sett"; \
+		fi; \
+	done; \
+}; \
 function commit_changes() { \
 	local attributes_file="$$1"; \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
-	local count_to_commit=""; \
-	if ! count_to_commit="$$($(FIND_BIN) . -name "$$to_commit" | wc -l; exit $${PIPESTATUS[0]})"; then \
-		echo_err "Cannot get count to commit with '$(FIND_BIN) . -type f -name '$$to_commit' | wc -l"; \
-		dirty_state_error "$$op_name"; \
-	fi; \
-	if [ -z "$$count_to_commit" ]; then \
-		echo_err "Count to commit with is empty string!"; \
-		dirty_state_error "$$op_name"; \
-	fi; \
-	if [[ "$$count_to_commit" != "0" ]]; then \
-		if [[ "$$to_commit" =~ [*?\[] ]]; then \
-			$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git rm --cached; \
-			local rm_statuses=("$${PIPESTATUS[@]}"); \
-			if [[ "$${rm_statuses[0]}" != "0" || "$${rm_statuses[1]}" != "0" ]]; then \
-				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git rm --cached"; \
+	local has_files=""; \
+	if [[ "$$to_commit" =~ [*?\[] ]]; then \
+		local to_commit_glob="./**/$$to_commit"; \
+		toggle_globs "on"; \
+		for fl in $$to_commit_glob; do \
+			has_files="true"; \
+			echo_info "Re-add file '$$fl' to git"; \
+			if ! git rm --cached "$$fl"; then \
+				toggle_globs; \
+				echo_err "Cannot run: git rm --cached '$$fl'"; \
 				dirty_state_error "$$op_name"; \
 			fi; \
-			$(FIND_BIN) . -name "$$to_commit" -print0 | xargs -0 git add; \
-			local add_statuses=("$${PIPESTATUS[@]}"); \
-			if [[ "$${add_statuses[0]}" != "0" || "$${add_statuses[1]}" != "0" ]]; then \
-				echo_err "Cannot '$(FIND_BIN) . -name '$$to_commit' -print0 | xargs -0 git add"; \
+			if ! git add "$$fl"; then \
+				toggle_globs; \
+				echo_err "Cannot run: git add '$$fl'"; \
 				dirty_state_error "$$op_name"; \
 			fi; \
-		else \
-			if ! git rm -r --cached $$to_commit; then \
-				echo_err "Cannot 'git rm --cached $$to_commit'"; \
+		done; \
+		toggle_globs; \
+	else \
+		if [ -e "$$to_commit" ]; then \
+			has_files="true"; \
+			echo_info "Re-add file or dir '$$to_commit' to git"; \
+			if ! git rm -r --cached "$$to_commit"; then \
+				echo_err "Cannot run: git rm --cached '$$to_commit'"; \
 				dirty_state_error "$$op_name"; \
 			fi; \
 			if ! git add $$to_commit; then \
-				echo_err "Cannot 'git add $$to_commit'"; \
+				echo_err "Cannot run: git add '$$to_commit'"; \
 				dirty_state_error "$$op_name"; \
 			fi; \
 		fi; \
-	else \
-		echo_info "Not found any files to re-add to git. Skip"; \
+	fi; \
+	if [ -z "$$has_files" ]; then \
+		echo_info "Cannot found files or dirs to re-add. Skip"; \
 	fi; \
 	if ! git add "$$attributes_file"; then \
 		echo_err "Cannot 'git add $$attributes_file'"; \

@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.1.0 && git pull
+git fetch -a && git checkout v0.2.0
 git submodule update --recursive --init 
 popd
 ```
@@ -53,6 +53,7 @@ include $(CURDIR)/makefile-git-crypt/include.mk.inc
 ```Makefile
 include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ```
+
 **WARNING! If you use submodule and github actions, add to checkout action checkout submodules `submodules: "recursive"`, like:**
 ```yaml
 ...
@@ -72,7 +73,7 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ```bash
 pushd .
 cd makefile-common
-git fetch -a && git checkout NEW_TAG && git pull
+git fetch -a && git checkout NEW_TAG
 popd
 ```
 
@@ -105,8 +106,15 @@ Also, another operations check that git repo is clean (has not changes).
 
 Add/remove operations change `.gitattributes` files to add git filters for encrypted files.
 Also, add/remove operations re-add files and dirs with `git rm --cached` and `git add` calls.
+If using globs, then script enable (and after finish re-add - disable) next shop for re-add:
+- `nullglob`
+- `globstar`
+- `dotglob`
+
+Also, if using globs targets find all globs with prefix `./**/` to consume all files.
 It needs for safe encrypt/decrypt files before commit for prevent keep files as encrypted after
 remove and encrypt all files after add.
+
 After operation, changes will commit with commit message like:
 
 ```
@@ -129,6 +137,8 @@ Crypt operation 'add file(s)' FAILED!
 
 In this case you **SHOULD resolve manually** for prevent lost files!
 
+##### Attention about partial removing with globs and dirs
+
 **Be careful with exclude part of secrets with `git-crypt/remove`**!
 
 If you need exclude some files from crypt from dir or glob you **SHOULD** remove
@@ -136,7 +146,8 @@ entry dir or all glob, and re-add with `git-crypt/add/file` or `git-crypt/add/di
 
 **ATTENTION!** Because it need multiple operation and every operation commit result,
 your git history **will contains commit with non-encrypted files!**.
-You **SHOULD** squash commits **before push** to prevent leak secrets!
+
+You **SHOULD** squash commits **before push** to prevent **leak** secrets!
 
 ### Targets list
 
