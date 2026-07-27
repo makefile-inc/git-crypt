@@ -74,6 +74,7 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 pushd .
 cd makefile-common
 git fetch -a && git checkout NEW_TAG
+git submodule update --recursive
 popd
 ```
 
