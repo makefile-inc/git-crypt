@@ -203,6 +203,7 @@ git-crypt/repo/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init l
 git-crypt/repo/symmetric/unlock: install/git-crypt _git-crypt/no-changes ## Unlock local repository with symmetric key
 	@##~ KEY_PATH=PATH - path to key file to unlock
 	@${INCLUDE_ECHO} \
+	${GIT_CRYPT_UNLOCKED_INCLUDES} \
 	if is_repo_unlocked; then \
 		echo_info "Already unlocked!"; \
 		exit 0; \
