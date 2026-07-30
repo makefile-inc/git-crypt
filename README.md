@@ -95,6 +95,36 @@ Includes contain some variables and make definitions.
 Now includes files in `common` repo contains next predefined variables:
 - `GIT_CRYPT_BIN_FULL` - full path to `git-crypt` binary.
 
+### Utils bash-functions includes
+
+Next definitions add bash functions definitions, which can cal in one line bash targets, like:
+```Makefile
+_test/echo:
+	@${GIT_CRYPT_UNLOCKED_INCLUDES} \
+	...
+```
+
+**WARNING! When use definition you SHOULD use `\` in the end of line for prevent break one-line script!**
+
+Next definitions can be included multiple times because sh redeclare function without error.
+
+- `GIT_CRYPT_UNLOCKED_INCLUDES` - add next sh functions:
+    - `is_repo_unlocked` - check that git repo already unlocked with git-crypt
+       if unlocked - return 0; else return 1
+    - `is_repo_locked`   - check that git repo locked with git-crypt
+      if locked - return 0; else return 1
+
+  Example:
+  ```Makefile
+  include *.mk
+  test/unlocked:
+		@${INCLUDE_ECHO} \
+		${GIT_CRYPT_UNLOCKED_INCLUDES} \
+		if ! is_repo_unlocked; then \
+			exit_with_err "Repo is locked!"; \
+		fi
+  ```
+
 ## Targets
 
 ### Description
@@ -154,6 +184,8 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
 
 ### Targets list
 
+#### Common
+
 - `install/git-crypt` - install git-crypt from https://github.com/makefile-inc/git-crypt repo.
    Binary will download from tag `git-crypt-bin:GIT_CRYPT_VERSION`. 
    `GIT_CRYPT_VERSION` saved in [00-version.mk](./00-versions.mk). 
@@ -162,6 +194,12 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
    - add symlink to binary with `GIT_CRYPT_VERSION` to [BINARIES_PATH](./makefile-common/README.md#variables) with name 
      `git-crypt`
    - build from source (see [sources](./hack/git-crypt/sources/) directory) and copy to [BINARIES_PATH](./makefile-common/README.md#variables) with name `git-crypt`.
+
+- `git-crypt/repo/lock` - lock local repository.
+
+- `clean/git-crypt` - remove `git-crypt` binary as `GIT_CRYPT_BIN_FULL`.
+
+#### Symmetric key operations
 
 - `git-crypt/repo/symmetric/init` - init local repository with symmetric key and export key.
   Before init, operation checks that repo is clean and not already unlocked.
@@ -182,7 +220,11 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
   Params:
   - `KEY_PATH`=*PATH* - path to key file to unlock.
 
-- `git-crypt/repo/lock` - lock local repository.
+- `git-crypt/repo/symmetric/check/locked` - check repo is locked with symmetric key.
+
+- `git-crypt/repo/symmetric/check/unlocked` - check repo is unlocked with symmetric key.
+
+#### Add or remove to/from git-crypt
 
 - `git-crypt/add/file` - add file to crypt and commit to git.
   [See above](#addremove-paths) for more information about mechanic.
@@ -214,8 +256,6 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
     **ATTENTION!** Because it need multiple operation and every operation commit result,
     your git history **will contains commit with non-encrypted files!**.
     You **SHOULD** squash commits **before push** to prevent leak secrets!
-
-- `clean/git-crypt` - remove `git-crypt` binary as `GIT_CRYPT_BIN_FULL`.
 
 ## Examples
 

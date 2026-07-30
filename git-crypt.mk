@@ -3,6 +3,26 @@ GIT_CRYPT_BIN_FULL = $(BINARIES_PATH)/$(GIT_CRYPT_BIN)
 
 _GIT_ATTRIBUTES_PATH = $(CURDIR)/.gitattributes
 
+# GIT_CRYPT_UNLOCKED_INCLUDES - add next sh function:
+#   is_repo_unlocked - check that git repo already unlocked with git-crypt
+#     if unlocked - return 0; else return 1
+#   is_repo_locked - check that git repo locked with git-crypt
+#     if locked - return 0; else return 1
+define GIT_CRYPT_UNLOCKED_INCLUDES
+function is_repo_unlocked() { \
+	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep 'filter.git-crypt' | wc -l)" = "3" ]; then \
+		return 0; \
+	fi; \
+	return 1; \
+}; \
+function is_repo_locked() { \
+	if ! is_repo_unlocked; then \
+		return 0; \
+	fi; \
+	return 1; \
+};
+endef
+
 define _GIT_CRYPT_OP_INCLUDES
 ${INCLUDE_ECHO} \
 function dirty_state_error() { \
@@ -96,7 +116,7 @@ function prepare_attributes() { \
 };
 endef
 
-##@ git-crypt
+##@ git-crypt. Common
 
 _git-crypt/no-changes:
 	@${INCLUDE_ECHO} \
@@ -116,9 +136,23 @@ install/git-crypt: export INSTALL_BIN_URL = https://github.com/makefile-inc/git-
 install/git-crypt: ## Install git-crypt from https://github.com/makefile-inc/git-crypt repo
 	@$(MAKE) install/binary
 
+
+git-crypt/repo/lock: install/git-crypt _git-crypt/no-changes ## Lock local repository
+	@${INCLUDE_ECHO} \
+	if ! $(GIT_CRYPT_BIN_FULL) lock; then \
+		exit_with_err "Cannot lock repo"; \
+	fi
+
+
+clean/git-crypt: ## Remove git-crypt bin
+	@rm -fv "$(GIT_CRYPT_BIN_FULL)"
+
+##@ git-crypt. Symmetric key
+
 git-crypt/repo/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init local repository with symmetric key and export key. Git repo should be clean
 	@##~ KEY_PATH=PATH - path to save key. Should be outside the repo (current dir)
 	@${INCLUDE_ECHO} \
+	${GIT_CRYPT_UNLOCKED_INCLUDES} \
 	if [ -z "$$KEY_PATH" ]; then \
 		exit_with_err "Output key file not specify with 'KEY_PATH' param (env)"; \
 	fi; \
@@ -135,7 +169,7 @@ git-crypt/repo/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init l
 	if [[ "$$KEY_PATH" == "$${cur_dir}/"* ]]; then \
     	exit_with_err "Key destination in repo path. Please choice another destination"; \
 	fi; \
-	if [ -s "$${cur_dir}/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep 'filter.git-crypt' | wc -l)" = "3" ]; then \
+	if is_repo_unlocked; then \
 		exit_with_err "Repo already unlocked!"; \
 	fi; \
 	attributes_file="$(_GIT_ATTRIBUTES_PATH)"; \
@@ -169,7 +203,8 @@ git-crypt/repo/symmetric/init: install/git-crypt _git-crypt/no-changes ## Init l
 git-crypt/repo/symmetric/unlock: install/git-crypt _git-crypt/no-changes ## Unlock local repository with symmetric key
 	@##~ KEY_PATH=PATH - path to key file to unlock
 	@${INCLUDE_ECHO} \
-	if [ -s "$(CURDIR)/.git/git-crypt/keys/default" ] && [ "$$(git config --local --list | grep 'filter.git-crypt' | wc -l)" = "3" ]; then \
+	${GIT_CRYPT_UNLOCKED_INCLUDES} \
+	if is_repo_unlocked; then \
 		echo_info "Already unlocked!"; \
 		exit 0; \
 	fi; \
@@ -213,11 +248,21 @@ git-crypt/repo/symmetric/unlock: install/git-crypt _git-crypt/no-changes ## Unlo
 		exit_with_err "Failed to set to git config git crypt diff"; \
 	fi
 
-git-crypt/repo/lock: install/git-crypt _git-crypt/no-changes ## Lock local repository
+git-crypt/repo/symmetric/check/locked: ## Check repo is locked with symmetric key
 	@${INCLUDE_ECHO} \
-	if ! $(GIT_CRYPT_BIN_FULL) lock; then \
-		exit_with_err "Cannot lock repo"; \
+	${GIT_CRYPT_UNLOCKED_INCLUDES} \
+	if ! is_repo_locked; then \
+		exit_with_err "Repo is unlocked!"; \
 	fi
+
+git-crypt/repo/symmetric/check/unlocked: ## Check repo is unlocked with symmetric key
+	@${INCLUDE_ECHO} \
+	${GIT_CRYPT_UNLOCKED_INCLUDES} \
+	if ! is_repo_unlocked; then \
+		exit_with_err "Repo is locked!"; \
+	fi
+
+##@ git-crypt. Add or remove to/from git-crypt
 
 git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt and commit to git. Git repo should be clean
 	@##~ FILE=PATH - path to add to crypt. Should not be absolute
@@ -265,7 +310,4 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	remove_without_slash="$${trimmed%/}"; \
 	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash"
 
-clean/git-crypt: ## Remove git-crypt bin
-	@rm -fv "$(GIT_CRYPT_BIN_FULL)"
-
-.PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt
+.PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt git-crypt/repo/symmetric/check/locked git-crypt/repo/symmetric/check/unlocked
