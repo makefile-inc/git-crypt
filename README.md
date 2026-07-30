@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.4.0
+git fetch -a && git checkout v0.5.0
 git submodule update --recursive --init 
 popd
 ```
