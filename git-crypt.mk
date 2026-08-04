@@ -53,41 +53,44 @@ function commit_changes() { \
 	local attributes_file="$$1"; \
 	local op_name="$$2"; \
 	local to_commit="$$3"; \
-	local has_files=""; \
-	if [[ "$$to_commit" =~ [*?\[] ]]; then \
-		local to_commit_glob="./**/$$to_commit"; \
-		toggle_globs "on"; \
-		for fl in $$to_commit_glob; do \
-			has_files="true"; \
-			echo_info "Re-add file '$$fl' to git"; \
-			if ! git rm --cached "$$fl"; then \
-				toggle_globs; \
-				echo_err "Cannot run: git rm --cached '$$fl'"; \
-				dirty_state_error "$$op_name"; \
-			fi; \
-			if ! git add "$$fl"; then \
-				toggle_globs; \
-				echo_err "Cannot run: git add '$$fl'"; \
-				dirty_state_error "$$op_name"; \
-			fi; \
-		done; \
-		toggle_globs; \
-	else \
-		if [ -e "$$to_commit" ]; then \
-			has_files="true"; \
-			echo_info "Re-add file or dir '$$to_commit' to git"; \
-			if ! git rm -r --cached "$$to_commit"; then \
-				echo_err "Cannot run: git rm --cached '$$to_commit'"; \
-				dirty_state_error "$$op_name"; \
-			fi; \
-			if ! git add $$to_commit; then \
-				echo_err "Cannot run: git add '$$to_commit'"; \
-				dirty_state_error "$$op_name"; \
+	local skip_re_add="$${4:-}"; \
+	if [[ "$$skip_re_add" != "true" ]]; then \
+		local has_files=""; \
+		if [[ "$$to_commit" =~ [*?\[] ]]; then \
+			local to_commit_glob="./**/$$to_commit"; \
+			toggle_globs "on"; \
+			for fl in $$to_commit_glob; do \
+				has_files="true"; \
+				echo_info "Re-add file '$$fl' to git"; \
+				if ! git rm --cached "$$fl"; then \
+					toggle_globs; \
+					echo_err "Cannot run: git rm --cached '$$fl'"; \
+					dirty_state_error "$$op_name"; \
+				fi; \
+				if ! git add "$$fl"; then \
+					toggle_globs; \
+					echo_err "Cannot run: git add '$$fl'"; \
+					dirty_state_error "$$op_name"; \
+				fi; \
+			done; \
+			toggle_globs; \
+		else \
+			if [ -e "$$to_commit" ]; then \
+				has_files="true"; \
+				echo_info "Re-add file or dir '$$to_commit' to git"; \
+				if ! git rm -r --cached "$$to_commit"; then \
+					echo_err "Cannot run: git rm --cached '$$to_commit'"; \
+					dirty_state_error "$$op_name"; \
+				fi; \
+				if ! git add $$to_commit; then \
+					echo_err "Cannot run: git add '$$to_commit'"; \
+					dirty_state_error "$$op_name"; \
+				fi; \
 			fi; \
 		fi; \
-	fi; \
-	if [ -z "$$has_files" ]; then \
-		echo_info "Cannot found files or dirs to re-add. Skip"; \
+		if [ -z "$$has_files" ]; then \
+			echo_info "Cannot found files or dirs to re-add. Skip"; \
+		fi; \
 	fi; \
 	if ! git add "$$attributes_file"; then \
 		echo_err "Cannot 'git add $$attributes_file'"; \
@@ -266,6 +269,7 @@ git-crypt/repo/symmetric/check/unlocked: ## Check repo is unlocked with symmetri
 
 git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt and commit to git. Git repo should be clean
 	@##~ FILE=PATH - path to add to crypt. Should not be absolute
+	@##~ SKIP_RE_ADD=true - if passed, skip re-add files to git
 	@${_GIT_CRYPT_OP_INCLUDES} \
 	check_path_for_op "FILE" "$$FILE"; \
 	attributes_file="$$(prepare_attributes)"; \
@@ -275,10 +279,15 @@ git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt
 		exit 0; \
 	fi; \
 	echo "$$trimmed filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
-	commit_changes "$$attributes_file" "add file(s)" "$$trimmed"
+	re_add=""; \
+	if [ -n "$$SKIP_RE_ADD" ]; then \
+		re_add="true"; \
+	fi; \
+	commit_changes "$$attributes_file" "add file(s)" "$$trimmed" "$$re_add"
 
 git-crypt/add/dir: install/git-crypt _git-crypt/no-changes ## Add dir to crypt and commit to git. Git repo should be clean
 	@##~ DIR=PATH - dir path to add to crypt. Should not be absolute
+	@##~ SKIP_RE_ADD=true - if passed, skip re-add files to git
 	@${_GIT_CRYPT_OP_INCLUDES} \
 	check_path_for_op "DIR" "$$DIR"; \
 	attributes_file="$$(prepare_attributes)"; \
@@ -290,10 +299,15 @@ git-crypt/add/dir: install/git-crypt _git-crypt/no-changes ## Add dir to crypt a
 		exit 0; \
 	fi; \
 	echo "$${dir_path}/** filter=git-crypt diff=git-crypt" >> "$$attributes_file"; \
-	commit_changes "$$attributes_file" "add dir" "$$dir_path"
+	re_add=""; \
+	if [ -n "$$SKIP_RE_ADD" ]; then \
+		re_add="true"; \
+	fi; \
+	commit_changes "$$attributes_file" "add dir" "$$dir_path" "$$re_add"
 
 git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from crypt and commit to git. Git repo should be clean
 	@##~ TO_REMOVE=PATH - path to remove from crypt. Should not be absolute
+	@##~ SKIP_RE_ADD=true - if passed, skip re-add files to git
 	@${_GIT_CRYPT_OP_INCLUDES} \
 	check_path_for_op "TO_REMOVE" "$$TO_REMOVE"; \
 	attributes_file="$$(prepare_attributes)"; \
@@ -308,6 +322,10 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 		exit_with_err "Cannot remove attribute with sed"; \
 	fi; \
 	remove_without_slash="$${trimmed%/}"; \
-	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash"
+	re_add=""; \
+	if [ -n "$$SKIP_RE_ADD" ]; then \
+		re_add="true"; \
+	fi; \
+	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash" "$$re_add"
 
 .PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt git-crypt/repo/symmetric/check/locked git-crypt/repo/symmetric/check/unlocked

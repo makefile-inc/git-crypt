@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.5.0
+git fetch -a && git checkout v0.6.0
 git submodule update --recursive --init 
 popd
 ```
@@ -232,12 +232,14 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
   Params:
   - `FILE`=*PATH* - path to add to crypt. Should not be absolute.
     You can use glob for add multiple files like `*.settings.tf`.
+  - `SKIP_RE_ADD`=*true* - if passed, skip re-add files to git
 
 - `git-crypt/add/dir` - add directory (with sub-directories) to crypt and commit to git.
   [See above](#addremove-paths) for more information about mechanic.
 
   Params:
   - `DIR`=*PATH* - path to add to crypt. Should not be absolute.
+  - `SKIP_RE_ADD`=*true* - if passed, skip re-add files to git
 
 - `git-crypt/remove` - add directory to crypt and commit to git.
   [See above](#addremove-paths) for more information about mechanic.
@@ -256,6 +258,7 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
     **ATTENTION!** Because it need multiple operation and every operation commit result,
     your git history **will contains commit with non-encrypted files!**.
     You **SHOULD** squash commits **before push** to prevent leak secrets!
+  - `SKIP_RE_ADD`=*true* - if passed, skip re-add files to git
 
 ## Examples
 
