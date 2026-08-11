@@ -72,7 +72,7 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 
 ```bash
 pushd .
-cd makefile-common
+cd makefile-git-crypt
 git fetch -a && git checkout v0.7.0
 git submodule update --recursive
 popd
