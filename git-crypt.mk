@@ -43,7 +43,7 @@ function re_add_files() { \
 	if [[ "$$is_glob_call" != "true" ]]; then \
 		if [ ! -e "$$fl" ]; then \
 			return 0; \
-		fi; \ 
+		fi; \
 		rm_r_flag="-r"; \
 		msg_suf=" or dir"; \
 	fi; \
