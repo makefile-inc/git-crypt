@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.6.0
+git fetch -a && git checkout v0.7.0
 git submodule update --recursive --init 
 popd
 ```
@@ -73,7 +73,7 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ```bash
 pushd .
 cd makefile-common
-git fetch -a && git checkout NEW_TAG
+git fetch -a && git checkout v0.7.0
 git submodule update --recursive
 popd
 ```
