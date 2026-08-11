@@ -24,7 +24,7 @@ function is_repo_locked() { \
 endef
 
 define _GIT_CRYPT_OP_INCLUDES
-${INCLUDE_ECHO} \
+${INCLUDE_FS_CONSUME} \
 function dirty_state_error() { \
 	echo_err "ATTENTION!"; \
 	echo_err "YOU REPO IN DIRTY STATE!"; \
@@ -35,19 +35,29 @@ function dirty_state_error() { \
 	echo "git commit ..."; \
 	exit_with_err "Crypt operation '$$1' FAILED!"; \
 }; \
-function toggle_globs() { \
-	local shop_arg="-u"; \
-	local err_msg="disable globs"; \
-	if [[ "$${1:-}" == "on" ]]; then \
-		shop_arg="-s"; \
-		err_msg="enable globs"; \
-	fi; \
-	local globs_sett=("dotglob" "nullglob" "globstar"); \
-	for g_sett in "$${globs_sett[@]}"; do \
-		if ! shopt $$shop_arg "$$g_sett"; then \
-			exit_with_err "Cannot $$err_msg $$g_sett"; \
+function re_add_files() { \
+	local fl="$$1"; \
+	local is_glob_call="$${2:-}"; \
+	local rm_r_flag=""; \
+	local msg_suf=""; \
+	if [[ "$$is_glob_call" != "true" ]]; then \
+		if [ ! -e "$$fl" ]; then \
+			return 0; \
 		fi; \
-	done; \
+		rm_r_flag="-r"; \
+		msg_suf=" or dir"; \
+	fi; \
+	echo_info "Re-add file$${msg_suf} '$$fl' to git"; \
+	if ! git rm $${rm_r_flag} --cached "$$fl"; then \
+		echo_err "Cannot run: git rm $${rm_r_flag} --cached '$$fl'"; \
+		return 1; \
+	fi; \
+	if ! git add "$$fl"; then \
+		echo_err "Cannot run: git add '$$fl'"; \
+		return 1; \
+	fi; \
+	echo -n "true"; \
+	return 0; \
 }; \
 function commit_changes() { \
 	local attributes_file="$$1"; \
@@ -56,36 +66,14 @@ function commit_changes() { \
 	local skip_re_add="$${4:-}"; \
 	if [[ "$$skip_re_add" != "true" ]]; then \
 		local has_files=""; \
-		if [[ "$$to_commit" =~ [*?\[] ]]; then \
+		if is_glob "$$to_commit"; then \
 			local to_commit_glob="./**/$$to_commit"; \
-			toggle_globs "on"; \
-			for fl in $$to_commit_glob; do \
-				has_files="true"; \
-				echo_info "Re-add file '$$fl' to git"; \
-				if ! git rm --cached "$$fl"; then \
-					toggle_globs; \
-					echo_err "Cannot run: git rm --cached '$$fl'"; \
-					dirty_state_error "$$op_name"; \
-				fi; \
-				if ! git add "$$fl"; then \
-					toggle_globs; \
-					echo_err "Cannot run: git add '$$fl'"; \
-					dirty_state_error "$$op_name"; \
-				fi; \
-			done; \
-			toggle_globs; \
+			if ! has_files="$$(foreach_dir_by_glob "" "$$to_commit_glob" "re_add_files" "true")"; then \
+				dirty_state_error "$$op_name"; \
+			fi; \
 		else \
-			if [ -e "$$to_commit" ]; then \
-				has_files="true"; \
-				echo_info "Re-add file or dir '$$to_commit' to git"; \
-				if ! git rm -r --cached "$$to_commit"; then \
-					echo_err "Cannot run: git rm --cached '$$to_commit'"; \
-					dirty_state_error "$$op_name"; \
-				fi; \
-				if ! git add $$to_commit; then \
-					echo_err "Cannot run: git add '$$to_commit'"; \
-					dirty_state_error "$$op_name"; \
-				fi; \
+			if ! has_files="$$(re_add_files "$$to_commit")"; then \
+				dirty_state_error "$$op_name"; \
 			fi; \
 		fi; \
 		if [ -z "$$has_files" ]; then \
@@ -122,15 +110,7 @@ endef
 ##@ git-crypt. Common
 
 _git-crypt/no-changes:
-	@${INCLUDE_ECHO} \
-	if ! stt="$$(git status)"; then \
-		exit_with_err "Cannot get repo status with 'git status'"; \
-	fi; \
-	if ! grep -q "nothing to commit, working tree clean" <<<"$$stt"; then \
-		echo_err "Git status:"; \
-		echo "$$stt"; \
-		exit_with_err "Git repo has changes"; \
-	fi
+	@$(MAKE) common/git/check/no-changes
 
 install/git-crypt: export INSTALL_BIN_NAME = $(GIT_CRYPT_BIN)
 install/git-crypt: export INSTALL_BIN_VERSION = $(GIT_CRYPT_VERSION)
@@ -139,13 +119,11 @@ install/git-crypt: export INSTALL_BIN_URL = https://github.com/makefile-inc/git-
 install/git-crypt: ## Install git-crypt from https://github.com/makefile-inc/git-crypt repo
 	@$(MAKE) install/binary
 
-
 git-crypt/repo/lock: install/git-crypt _git-crypt/no-changes ## Lock local repository
 	@${INCLUDE_ECHO} \
 	if ! $(GIT_CRYPT_BIN_FULL) lock; then \
 		exit_with_err "Cannot lock repo"; \
 	fi
-
 
 clean/git-crypt: ## Remove git-crypt bin
 	@rm -fv "$(GIT_CRYPT_BIN_FULL)"
