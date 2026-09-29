@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.10.0
+git fetch -a && git checkout v0.11.0
 git submodule update --recursive --init 
 popd
 ```
@@ -73,7 +73,7 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.10.0
+git fetch -a && git checkout v0.11.0
 git submodule update --recursive
 popd
 ```
@@ -85,6 +85,30 @@ Please add to `.gitignore` all entries from this repository `.gitignore`.
 and run `make common/git/check/gitignore GITIGNORES_WITH_REQUIRED_RULES=makefile-common/.gitignore,makefile-git-crypt/.gitignore`.
 
 Because targets generate some files which do not commit to git repo.
+
+### Help target customize
+
+By default, run `make` or `make help` output all libraries targets (includes `makefile-common`).
+
+For comfortable help output, we recommend add to your `Makefile` next lines after include `makefile-git-crypt`
+(replace `YOUR PROJECT NAME` to you name of project):
+
+```Makefile
+include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
+
+HELP_LIBRARIES_FIRST := true
+export HELP_LIBRARIES_FIRST
+
+HELP_LIBRARIES_OUT := $(_INC_MK_GIT_CRYPT_ROOT_DIR)
+export HELP_LIBRARIES_OUT
+
+##@ YOUR PROJECT NAME
+```
+
+This lines enable output help targets of `makefile-git-crypt` first, after it will output targets
+from your `Makefile` for comfortable reading help message.
+
+See more section [Customize output help in our project](https://github.com/makefile-inc/common#customize-output-help-in-our-project) for more information.
 
 ## Pre-definitions
 
