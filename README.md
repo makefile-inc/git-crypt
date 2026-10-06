@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.13.0
+git fetch -a && git checkout v0.14.0
 git submodule update --recursive --init 
 popd
 ```
@@ -71,14 +71,14 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ## Update as submodule
 
 ```bash
-make common/git/upgrade-submodule SUBMODULE_DIR="makefile-git-crypt" CHECKOUT_TO="v0.13.0"
+make common/git/submodule/upgrade SUBMODULE_DIR="makefile-git-crypt" CHECKOUT_TO="v0.14.0"
 ``` 
 or manually:
 
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.13.0
+git fetch -a && git checkout v0.14.0
 git submodule update --recursive
 popd
 ```
