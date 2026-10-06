@@ -243,6 +243,57 @@ git-crypt/repo/symmetric/check/unlocked: ## Check repo is unlocked with symmetri
 		exit_with_err "Repo is locked!"; \
 	fi
 
+git-crypt/repo/symmetric/unlock/after-clone: ## Unlock repo fully after clone
+	@##~ KEY_PATH=PATH               - path to key file to unlock.
+	@##~                               Required.
+	@##~ TARGET_TO_INSTALL_DEPS=NAME - if passed, use make target to install need deps with git-crypt.
+	@##~                               It useful if git-crypt stored in repo.
+	@##~                               Optional. Default: install/git-crypt
+	@${INCLUDE_ECHO} \
+	if [ -z "$$KEY_PATH" ]; then \
+		exit_with_err "git-crypt key file is not provided with KEY_PATH param (env)"; \
+	fi; \
+	user_name="$(USER)"; \
+	if [ -z "$$user_name" ]; then \
+		exit_with_err "User name is empty in USER env"; \
+	fi; \
+	echo_info "Chown to '$$user_name:$$user_name' git-crypt key file '$$KEY_PATH' with sudo"; \
+	if ! sudo chown "$$user_name:$$user_name" $$KEY_PATH; then \
+		exit_with_err "Cannot chown git-crypt key file '$$KEY_PATH'"; \
+	fi; \
+	key_file=""; \
+	if ! key_file="$$(realpath "$$KEY_PATH")"; then \
+		exit_with_err "Cannot get real path for '$$KEY_PATH'"; \
+	fi; \
+	if [ ! -f "$$key_file" ]; then \
+		exit_with_err "git-crypt key file '$$key_file' is not file"; \
+	fi; \
+	deps_target="install/git-crypt"; \
+	if [ -n "$$TARGET_TO_INSTALL_DEPS" ]; then \
+		deps_target="$$TARGET_TO_INSTALL_DEPS"; \
+	fi; \
+	echo_info "Install git-crypt deps with target '$$deps_target'"; \
+	if ! $(MAKE) "$$deps_target"; then \
+		exit_with_err "Cannot install deps with '$(MAKE) $$deps_target'"; \
+	fi; \
+	echo_info "Unlock repo with git-crypt key '$$key_file'"; \
+	if ! $(MAKE) git-crypt/repo/symmetric/unlock KEY_PATH="$$key_file"; then \
+		exit_with_err "Cannot unlock repo with '$(MAKE) git-crypt/repo/symmetric/unlock KEY_PATH=$$key_file'"; \
+	fi; \
+	if ! $(MAKE) git-crypt/repo/symmetric/check/unlocked; then \
+		exit_with_err "Repo is not unlocked"; \
+	fi; \
+	remove_key_file=""; \
+	read -p "Remove key file '$$key_file' [y/n]: " remove_key_file; \
+	if [[ "$$remove_key_file" == "y" ]]; then \
+		echo_warn "Remove file $$key_file"; \
+		if ! rm "$$key_file"; then \
+			echo_err "Key file '$$key_file' is not removed!"; \
+		fi; \
+		exit 0; \
+	fi; \
+	echo_warn "Removing key file '$$key_file' skipped"
+
 ##@ git-crypt. Add or remove to/from git-crypt
 
 git-crypt/add/file: install/git-crypt _git-crypt/no-changes ## Add file to crypt and commit to git. Git repo should be clean
@@ -306,4 +357,4 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	fi; \
 	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash" "$$re_add"
 
-.PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt git-crypt/repo/symmetric/check/locked git-crypt/repo/symmetric/check/unlocked
+.PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt git-crypt/repo/symmetric/check/locked git-crypt/repo/symmetric/check/unlocked git-crypt/repo/symmetric/unlock/after-clone

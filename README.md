@@ -34,7 +34,7 @@ Checkout to target version:
 ```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.12.0
+git fetch -a && git checkout v0.13.0
 git submodule update --recursive --init 
 popd
 ```
@@ -71,9 +71,14 @@ include $(CURDIR)/makefile-git-crypt/include.mk.full.inc
 ## Update as submodule
 
 ```bash
+make common/git/upgrade-submodule SUBMODULE_DIR="makefile-git-crypt" CHECKOUT_TO="v0.13.0"
+``` 
+or manually:
+
+```bash
 pushd .
 cd makefile-git-crypt
-git fetch -a && git checkout v0.12.0
+git fetch -a && git checkout v0.13.0
 git submodule update --recursive
 popd
 ```
@@ -247,6 +252,23 @@ You **SHOULD** squash commits **before push** to prevent **leak** secrets!
 - `git-crypt/repo/symmetric/check/locked` - check repo is locked with symmetric key.
 
 - `git-crypt/repo/symmetric/check/unlocked` - check repo is unlocked with symmetric key.
+
+- `git-crypt/repo/symmetric/unlock/after-clone` - unlock repo after clone
+
+  This target:
+  - chown passed key file to current user
+  - install `git-crypt` with `install/git-crypt` or passed target with `TARGET_TO_INSTALL_DEPS`
+  - unlock repo with `git-crypt/repo/symmetric/unlock`
+  - check repo is unlocked
+  - ask to remove passed key file
+
+  Params:
+  - `KEY_PATH`=*PATH* - path to key file to unlock.
+  - `TARGET_TO_INSTALL_DEPS`=*NAME* - if passed, use make target to install need deps with git-crypt.
+	  
+    It useful if git-crypt stored in repo.
+	  
+    Optional. Default: install/git-crypt
 
 #### Add or remove to/from git-crypt
 
