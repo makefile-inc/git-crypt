@@ -112,6 +112,11 @@ endef
 _git-crypt/no-changes:
 	@$(MAKE) common/git/check/no-changes
 
+git-crypt/upgrade/module: ## Upgrade git-crypt submodule in your repo
+	@##~ CHECKOUT_TO=GIT_REF_OR_TAG - if passed checkout to passed ref, otherwise to latest tag
+	@${INCLUDE_MAKEFILE_GIT_MODULE} \
+	update_submodule_to_latest "$(_INC_MK_GIT_CRYPT_ROOT_DIR)" "makefile-git-crypt" "$${CHECKOUT_TO:-}"
+
 install/git-crypt: export INSTALL_BIN_NAME = $(GIT_CRYPT_BIN)
 install/git-crypt: export INSTALL_BIN_VERSION = $(GIT_CRYPT_VERSION)
 install/git-crypt: export INSTALL_BIN_VERSION_ARG = version
@@ -357,4 +362,4 @@ git-crypt/remove: install/git-crypt _git-crypt/no-changes ## Remove path from cr
 	fi; \
 	commit_changes "$$attributes_file" "remove path" "$$remove_without_slash" "$$re_add"
 
-.PHONY: help _git-crypt/no-changes install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt git-crypt/repo/symmetric/check/locked git-crypt/repo/symmetric/check/unlocked git-crypt/repo/symmetric/unlock/after-clone
+.PHONY: help _git-crypt/no-changes git-crypt/upgrade/module install/git-crypt git-crypt/repo/symmetric/init git-crypt/repo/symmetric/unlock git-crypt/repo/lock git-crypt/add/file git-crypt/add/dir git-crypt/remove clean/git-crypt git-crypt/repo/symmetric/check/locked git-crypt/repo/symmetric/check/unlocked git-crypt/repo/symmetric/unlock/after-clone
